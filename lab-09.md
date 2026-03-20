@@ -162,7 +162,7 @@ ggplot(compas, aes(x = decile_score)) +
 
 ![](lab-09_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-# Ex 4
+## Ex 4
 
 ``` r
 ggplot(compas, aes(x = race, fill = sex)) +
@@ -172,3 +172,48 @@ ggplot(compas, aes(x = race, fill = sex)) +
 ```
 
 ![](lab-09_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+# Part 2
+
+## Ex 5
+
+There seems to be a small difference where higher scores predict actual
+recidivism. But more information is needed for inference.
+
+``` r
+compas <- compas %>% 
+  mutate(two_year_recid = as.factor(two_year_recid))
+
+ggplot(compas, aes(x = two_year_recid, y = decile_score)) +
+  geom_col(binwidth = 1)
+```
+
+    ## Warning in geom_col(binwidth = 1): Ignoring unknown parameters: `binwidth`
+
+![](lab-09_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+## Ex 6
+
+``` r
+compas <- compas %>% 
+  mutate(compas_classification =
+  case_when(
+    decile_score >= 7 & two_year_recid == 1 ~ "TP",
+    decile_score >= 7 & two_year_recid == 0 ~ "FP",
+    decile_score <= 4 & two_year_recid == 1 ~ "FN",
+    decile_score <= 4 & two_year_recid == 0 ~ "TN"
+))
+```
+
+## Ex 7
+
+68.4% of its predicitons are correct. This seems to be an okay
+performance, above the by-change rate but not impressively high.,
+
+``` r
+prop.table(table(compas$compas_classification))
+```
+
+    ## 
+    ##        FN        FP        TN        TP 
+    ## 0.2063815 0.1093007 0.4550238 0.2292940
