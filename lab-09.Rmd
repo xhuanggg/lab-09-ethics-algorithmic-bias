@@ -1,7 +1,7 @@
 ---
 title: "Lab 09: Algorithmic Bias"
-author: "Insert your name here"
-date: "Insert date here"
+author: "Thomas Huang"
+date: "2026-03-26"
 output: github_document
 ---
 
@@ -12,6 +12,7 @@ First, let's load the necessary packages:
 ```{r load-packages, message = FALSE}
 library(tidyverse)
 library(fairness)
+library(janitor)
 ```
 
 ### The data
@@ -19,10 +20,57 @@ library(fairness)
 For this lab, we'll use the COMPAS dataset compiled by ProPublica. The data has been preprocessed and cleaned for you. You'll have to load it yourself. The dataset is available in the `data` folder, but I've changed the file name from `compas-scores-two-years.csv` to `compas-scores-2-years.csv`. I've done this help you practice debugging code when you encounter an error.
 
 ```{r}
-compas <- read_csv("data/compas-scores-two-years.csv")
+compas <- read_csv("/Users/roberthuang/Desktop/Wake/Spring 2026/DSPsych/lab-09-ethics-algorithmic-bias/data/compas-scores-2-years.csv")
+```
+
+# Part 1 
+
+```{r}
+# Load the COMPAS data
+compas <- read_csv("data/compas-scores-2-years.csv") %>%
+  clean_names() %>%
+  rename(
+    decile_score = decile_score_12,
+    priors_count = priors_count_15
+  )
+
+# Take a look at the data
+glimpse(compas)
+```
+
+## Ex 1
+
+```{r}
+nrow(compas) #There are 7,214 rows in the dataset, each of which represents a convinction.
+ncol(compas) #There are 53 columns in the dataset.
+```
+
+# Ex 2 
+
+```{r}
+n_distinct(compas$id) #By looking at the unique ids, there are 7,214 unique defendants in the dataset, which is the same as the number of rows. If not, a reason might be an individual having multiple convictions on the record.
+```
+
+# Ex 3 
+
+The distribution of risk scores is right skewed.
+```{r}
+ggplot(compas, aes(x = decile_score)) +
+  geom_histogram(binwidth = 1)
+```
+
+# Ex 4
+
+```{r}
+ggplot(compas, aes(x = race, fill = sex)) +
+  geom_bar() +
+  facet_wrap(~age_cat, ncol = 2) +
+  coord_flip()
 ```
 
 
-## Additional Exercises  
 
-Almost there! Keep building on your work and follow the same structure for any remaining exercises. Each exercise builds on the last, so take your time and make sure your code is working as expected.  
+
+
+
+
