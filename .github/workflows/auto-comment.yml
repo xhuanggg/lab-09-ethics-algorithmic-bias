@@ -1,0 +1,12 @@
+name: Auto Comment
+on: [issues]
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: wow-actions/auto-comment@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          issuesOpened: |
+            👋 @{{ author }}
+            Thank you for raising an issue. If you are trying to submit a lab, you should transfer this issue to YEAR-lab_09. Otherwise, your lab won't be added to Prof. Mason's to-grade list. And, no one will know that you're ready to receive feedback!
