@@ -13,6 +13,7 @@ First, let's load the necessary packages:
 library(tidyverse)
 library(fairness)
 library(janitor)
+library(gmodels)
 ```
 
 ### The data
@@ -100,6 +101,71 @@ compas <- compas %>%
 prop.table(table(compas$compas_classification))
 ```
 
+# Part 3
+## Ex 8
 
+The distribution of decile scores among white defendants is right skewed, which means white defendants are lessly likely to get a higher decile score. But black defendants have a similar chance of getting lower or higher decile scores.
+```{r}
+compas_r <- compas %>% 
+  filter(race %in% c("African-American", "Caucasian"))
 
+ggplot(compas_r, aes(x = decile_score, fill = race)) +
+  geom_histogram(binwidth = 1)
+```
 
+## Ex 9
+
+A higher percentage of black defendants are classified as high risk than that of white defendants.
+```{r}
+compas_r <- compas_r%>% 
+  mutate(high_risk =
+  case_when(
+    decile_score >= 7 ~ "TRUE",
+    decile_score <= 4 ~ "FALSE"
+))
+
+CrossTable(table(compas_r$high_risk, compas_r$race),expected=T,prop.r=F,prop.c=T,prop.t=F,prop.chisq=F,chisq=T,fisher=T,format="SPSS")
+```
+
+## Ex 10
+
+False positive rate of black defendants: 31.11%.
+False positive rate of white defendants: 10.67%.
+
+False negative rate of black defendants: 35.23%.
+False negative rate of white defendants: 61.96%.
+```{r}
+# False positive
+non_recidivists <- compas_r %>%
+  filter(two_year_recid == 0)
+
+CrossTable(table(non_recidivists$high_risk, non_recidivists$race),expected=T,prop.r=F,prop.c=T,prop.t=F,prop.chisq=F,chisq=T,fisher=T,format="SPSS")
+
+# False negative
+recidivists <- compas_r %>%
+  filter(two_year_recid == 1)
+
+CrossTable(table(recidivists$high_risk, recidivists$race),expected=T,prop.r=F,prop.c=T,prop.t=F,prop.chisq=F,chisq=T,fisher=T,format="SPSS")
+```
+
+## Ex 11
+
+The overall accuracy among black defendants is lower. There's a higher false positive rate among black defendants and a higher false negative rate among white defendants.
+```{r}
+compas_r %>% 
+  filter(!is.na(compas_classification)) %>% 
+  ggplot(aes(x = race, fill = compas_classification)) +
+  geom_bar(position = "fill") +
+  labs(
+    fill = "Prediction Type",
+    y = "Proportion"
+  )+
+  scale_fill_discrete(
+  labels = c("TP" = "True Positive",
+             "FP" = "False Positive",
+             "FN" = "False Negative",
+             "TN" = "True Negative")
+)
+```
+
+# Part 4

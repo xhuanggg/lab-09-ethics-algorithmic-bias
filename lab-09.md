@@ -11,6 +11,7 @@ First, let’s load the necessary packages:
 library(tidyverse)
 library(fairness)
 library(janitor)
+library(gmodels)
 ```
 
 ### The data
@@ -217,3 +218,263 @@ prop.table(table(compas$compas_classification))
     ## 
     ##        FN        FP        TN        TP 
     ## 0.2063815 0.1093007 0.4550238 0.2292940
+
+# Part 3
+
+## Ex 8
+
+The distribution of decile scores among white defendants is right
+skewed, which means white defendants are lessly likely to get a higher
+decile score. But black defendants have a similar chance of getting
+lower or higher decile scores.
+
+``` r
+compas_r <- compas %>% 
+  filter(race %in% c("African-American", "Caucasian"))
+
+ggplot(compas_r, aes(x = decile_score, fill = race)) +
+  geom_histogram(binwidth = 1)
+```
+
+![](lab-09_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+## Ex 9
+
+A higher percentage of black defendants are classified as high risk than
+that of white defendants.
+
+``` r
+compas_r <- compas_r%>% 
+  mutate(high_risk =
+  case_when(
+    decile_score >= 7 ~ "TRUE",
+    decile_score <= 4 ~ "FALSE"
+))
+
+CrossTable(table(compas_r$high_risk, compas_r$race),expected=T,prop.r=F,prop.c=T,prop.t=F,prop.chisq=F,chisq=T,fisher=T,format="SPSS")
+```
+
+    ## 
+    ##    Cell Contents
+    ## |-------------------------|
+    ## |                   Count |
+    ## |         Expected Values |
+    ## |          Column Percent |
+    ## |-------------------------|
+    ## 
+    ## Total Observations in Table:  4966 
+    ## 
+    ##              |  
+    ##              | African-American  |        Caucasian  |        Row Total | 
+    ## -------------|------------------|------------------|------------------|
+    ##        FALSE |            1522  |            1600  |            3122  | 
+    ##              |        1852.705  |        1269.295  |                  | 
+    ##              |          51.646% |          79.247% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ##         TRUE |            1425  |             419  |            1844  | 
+    ##              |        1094.295  |         749.705  |                  | 
+    ##              |          48.354% |          20.753% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ## Column Total |            2947  |            2019  |            4966  | 
+    ##              |          59.344% |          40.656% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ## 
+    ##  
+    ## Statistics for All Table Factors
+    ## 
+    ## 
+    ## Pearson's Chi-squared test 
+    ## ------------------------------------------------------------
+    ## Chi^2 =  391.0136     d.f. =  1     p =  4.97974e-87 
+    ## 
+    ## Pearson's Chi-squared test with Yates' continuity correction 
+    ## ------------------------------------------------------------
+    ## Chi^2 =  389.8322     d.f. =  1     p =  9.00354e-87 
+    ## 
+    ##  
+    ## Fisher's Exact Test for Count Data
+    ## ------------------------------------------------------------
+    ## Sample estimate odds ratio:  0.2797732 
+    ## 
+    ## Alternative hypothesis: true odds ratio is not equal to 1
+    ## p =  1.843073e-90 
+    ## 95% confidence interval:  0.2450988 0.3189669 
+    ## 
+    ## Alternative hypothesis: true odds ratio is less than 1
+    ## p =  1.278519e-90 
+    ## 95% confidence interval:  0 0.3124856 
+    ## 
+    ## Alternative hypothesis: true odds ratio is greater than 1
+    ## p =  1 
+    ## 95% confidence interval:  0.2503133 Inf 
+    ## 
+    ## 
+    ##  
+    ##        Minimum expected frequency: 749.7052
+
+## Ex 10
+
+False positive rate of black defendants: 31.11%. False positive rate of
+white defendants: 10.67%.
+
+False negative rate of black defendants: 35.23%. False negative rate of
+white defendants: 61.96%.
+
+``` r
+# False positive
+non_recidivists <- compas_r %>%
+  filter(two_year_recid == 0)
+
+CrossTable(table(non_recidivists$high_risk, non_recidivists$race),expected=T,prop.r=F,prop.c=T,prop.t=F,prop.chisq=F,chisq=T,fisher=T,format="SPSS")
+```
+
+    ## 
+    ##    Cell Contents
+    ## |-------------------------|
+    ## |                   Count |
+    ## |         Expected Values |
+    ## |          Column Percent |
+    ## |-------------------------|
+    ## 
+    ## Total Observations in Table:  2712 
+    ## 
+    ##              |  
+    ##              | African-American  |        Caucasian  |        Row Total | 
+    ## -------------|------------------|------------------|------------------|
+    ##        FALSE |             990  |            1139  |            2129  | 
+    ##              |        1128.087  |        1000.913  |                  | 
+    ##              |          68.894% |          89.333% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ##         TRUE |             447  |             136  |             583  | 
+    ##              |         308.913  |         274.087  |                  | 
+    ##              |          31.106% |          10.667% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ## Column Total |            1437  |            1275  |            2712  | 
+    ##              |          52.987% |          47.013% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ## 
+    ##  
+    ## Statistics for All Table Factors
+    ## 
+    ## 
+    ## Pearson's Chi-squared test 
+    ## ------------------------------------------------------------
+    ## Chi^2 =  167.2499     d.f. =  1     p =  2.950115e-38 
+    ## 
+    ## Pearson's Chi-squared test with Yates' continuity correction 
+    ## ------------------------------------------------------------
+    ## Chi^2 =  166.0409     d.f. =  1     p =  5.419088e-38 
+    ## 
+    ##  
+    ## Fisher's Exact Test for Count Data
+    ## ------------------------------------------------------------
+    ## Sample estimate odds ratio:  0.2645761 
+    ## 
+    ## Alternative hypothesis: true odds ratio is not equal to 1
+    ## p =  6.17536e-40 
+    ## 95% confidence interval:  0.2127355 0.3275084 
+    ## 
+    ## Alternative hypothesis: true odds ratio is less than 1
+    ## p =  4.451581e-40 
+    ## 95% confidence interval:  0 0.3169062 
+    ## 
+    ## Alternative hypothesis: true odds ratio is greater than 1
+    ## p =  1 
+    ## 95% confidence interval:  0.2202699 Inf 
+    ## 
+    ## 
+    ##  
+    ##        Minimum expected frequency: 274.0874
+
+``` r
+# False negative
+recidivists <- compas_r %>%
+  filter(two_year_recid == 1)
+
+CrossTable(table(recidivists$high_risk, recidivists$race),expected=T,prop.r=F,prop.c=T,prop.t=F,prop.chisq=F,chisq=T,fisher=T,format="SPSS")
+```
+
+    ## 
+    ##    Cell Contents
+    ## |-------------------------|
+    ## |                   Count |
+    ## |         Expected Values |
+    ## |          Column Percent |
+    ## |-------------------------|
+    ## 
+    ## Total Observations in Table:  2254 
+    ## 
+    ##              |  
+    ##              | African-American  |        Caucasian  |        Row Total | 
+    ## -------------|------------------|------------------|------------------|
+    ##        FALSE |             532  |             461  |             993  | 
+    ##              |         665.231  |         327.769  |                  | 
+    ##              |          35.232% |          61.962% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ##         TRUE |             978  |             283  |            1261  | 
+    ##              |         844.769  |         416.231  |                  | 
+    ##              |          64.768% |          38.038% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ## Column Total |            1510  |             744  |            2254  | 
+    ##              |          66.992% |          33.008% |                  | 
+    ## -------------|------------------|------------------|------------------|
+    ## 
+    ##  
+    ## Statistics for All Table Factors
+    ## 
+    ## 
+    ## Pearson's Chi-squared test 
+    ## ------------------------------------------------------------
+    ## Chi^2 =  144.4961     d.f. =  1     p =  2.767745e-33 
+    ## 
+    ## Pearson's Chi-squared test with Yates' continuity correction 
+    ## ------------------------------------------------------------
+    ## Chi^2 =  143.4136     d.f. =  1     p =  4.773131e-33 
+    ## 
+    ##  
+    ## Fisher's Exact Test for Count Data
+    ## ------------------------------------------------------------
+    ## Sample estimate odds ratio:  0.3341116 
+    ## 
+    ## Alternative hypothesis: true odds ratio is not equal to 1
+    ## p =  3.186e-33 
+    ## 95% confidence interval:  0.2772169 0.4021543 
+    ## 
+    ## Alternative hypothesis: true odds ratio is less than 1
+    ## p =  2.084246e-33 
+    ## 95% confidence interval:  0 0.3906685 
+    ## 
+    ## Alternative hypothesis: true odds ratio is greater than 1
+    ## p =  1 
+    ## 95% confidence interval:  0.2854984 Inf 
+    ## 
+    ## 
+    ##  
+    ##        Minimum expected frequency: 327.7693
+
+## Ex 11
+
+The overall accuracy among black defendants is lower. There’s a higher
+false positive rate among black defendants and a higher false negative
+rate among white defendants.
+
+``` r
+compas_r %>% 
+  filter(!is.na(compas_classification)) %>% 
+  ggplot(aes(x = race, fill = compas_classification)) +
+  geom_bar(position = "fill") +
+  labs(
+    fill = "Prediction Type",
+    y = "Proportion"
+  )+
+  scale_fill_discrete(
+  labels = c("TP" = "True Positive",
+             "FP" = "False Positive",
+             "FN" = "False Negative",
+             "TN" = "True Negative")
+)
+```
+
+![](lab-09_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+# Part 4
