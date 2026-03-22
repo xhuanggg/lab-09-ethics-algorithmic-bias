@@ -15,6 +15,7 @@ library(fairness)
 library(janitor)
 library(gmodels)
 library(lmtest)
+library(caret)
 ```
 
 ### The data
@@ -197,8 +198,147 @@ lrtest(model1, model3)
 ```
 
 # Part 5
+## Ex 14
+I would ensure equal or at least similar distribution of TN, TP, FN, and FP rates across races.
 
+## Ex 15
+Ensuring similar prediction accuracy across races may compromise calibration and vice versa.
 
+## Ex 16
+Algorithm developers should give a full disclosure of the caveats when using such information. In the case of COMPAS, Northpointe should disclose their model has different prediction accuracies across races.
 
+# Stretch
+## Ex 17
 
+Perhaps the distribution of prior convictions among black defendants are more right skewed. So the algorithm is more likely to assume black defendants will recidivate.
+```{r}
+ggplot(compas, aes(x = priors_count, fill = race)) +
+  geom_histogram(binwidth = 1)
+```
 
+## Ex 18
+
+The visualizations show that black defendants were convicted at younger ages with felony charges, which may contribute to the biases in the algorithm.
+```{r}
+ggplot(compas, aes(x = age, fill = race)) +
+  geom_histogram(binwidth = 1)
+
+ggplot(compas, aes(x = c_charge_degree, fill = race)) +
+  geom_bar(binwidth = 1)
+```
+
+## Ex 19
+
+```{r}
+# Create a logistic regression model
+recid_model <- glm(
+  two_year_recid ~ age + priors_count + c_charge_degree,
+  data = compas,
+  family = binomial()
+)
+
+# Add predicted probabilities to the dataset
+compas <- compas %>%
+  mutate(
+    predicted_prob = predict(recid_model, type = "response"),
+    our_high_risk = predicted_prob >= 0.5
+  )
+```
+
+## Ex 20
+
+The model is still kind of biased. The false positive rate is still much higher among black defendants by looking at the specificity.
+```{r}
+compas$two_year_recid_bool <- compas$two_year_recid == 1
+compas$two_year_recid_bool <- as.factor(compas$two_year_recid_bool)
+compas$our_high_risk <- as.factor(compas$our_high_risk)
+
+# Black defendants
+compas_black_defendants <- compas %>% 
+  filter(race == "African-American")
+
+set.seed(304844)
+confusionMatrix(
+  compas_black_defendants$our_high_risk,
+  compas_black_defendants$two_year_recid_bool,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+
+# White defendants
+compas_white_defendants <- compas %>% 
+  filter(race == "Caucasian")
+
+set.seed(304844)
+confusionMatrix(
+  compas_white_defendants$our_high_risk,
+  compas_white_defendants$two_year_recid_bool,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+```
+
+## Ex 21
+
+```{r}
+# Create a logistic regression model with race
+recid_model_with_race <- glm(
+  two_year_recid ~ age + priors_count + c_charge_degree + race,
+  data = compas,
+  family = binomial()
+)
+
+# Add predicted probabilities to the dataset
+compas <- compas %>%
+  mutate(
+    predicted_prob_with_race = predict(recid_model_with_race, type = "response"),
+    race_high_risk = predicted_prob_with_race >= 0.5
+  )
+```
+
+## Ex 22
+
+The model is still kind of biased. Oddly, the predictions of white defendants are exactly the same across the two models. See the last confusion matrix.
+```{r}
+compas$race_high_risk <- as.factor(compas$race_high_risk)
+
+# Black defendants
+compas_black_defendants <- compas %>% 
+  filter(race == "African-American")
+
+set.seed(304844)
+confusionMatrix(
+  compas_black_defendants$race_high_risk,
+  compas_black_defendants$two_year_recid_bool,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+
+# White defendants
+compas_white_defendants <- compas %>% 
+  filter(race == "Caucasian")
+
+set.seed(304844)
+confusionMatrix(
+  compas_white_defendants$race_high_risk,
+  compas_white_defendants$two_year_recid_bool,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+
+confusionMatrix(
+  compas_white_defendants$race_high_risk,
+  compas_white_defendants$our_high_risk,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+```
+
+## Ex 23
+
+Given what we have here, such algorithms should not be used. I think the biggest concern is accuracy, which is in the 60% to 70% range. This is far from being perfect. If they are used, decision-makers should be told the key performance indices, such as accuracy, sensitivity, specificity, and fairness. The trade-off between accuracy and fairness seems to be tricky to handle. One potential solution is a multilevel model structure, such as including racial-level and defendant-level predictors. The role of transparency in algorithmic decision-making is to acknowledge there is no transparency in algorithmic decision-making.

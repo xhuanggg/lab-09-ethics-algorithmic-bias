@@ -13,6 +13,7 @@ library(fairness)
 library(janitor)
 library(gmodels)
 library(lmtest)
+library(caret)
 ```
 
 ### The data
@@ -624,3 +625,331 @@ lrtest(model1, model3)
     ## 2   4 -3851.6  2 4.2409       0.12
 
 # Part 5
+
+## Ex 14
+
+I would ensure equal or at least similar distribution of TN, TP, FN, and
+FP rates across races.
+
+## Ex 15
+
+Ensuring similar prediction accuracy across races may compromise
+calibration and vice versa.
+
+## Ex 16
+
+Algorithm developers should give a full disclosure of the caveats when
+using such information. In the case of COMPAS, Northpointe should
+disclose their model has different prediction accuracies across races.
+
+# Stretch
+
+## Ex 17
+
+Perhaps the distribution of prior convictions among black defendants are
+more right skewed. So the algorithm is more likely to assume black
+defendants will recidivate.
+
+``` r
+ggplot(compas, aes(x = priors_count, fill = race)) +
+  geom_histogram(binwidth = 1)
+```
+
+![](lab-09_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
+## Ex 18
+
+The visualizations show that black defendants were convicted at younger
+ages with felony charges, which may contribute to the biases in the
+algorithm.
+
+``` r
+ggplot(compas, aes(x = age, fill = race)) +
+  geom_histogram(binwidth = 1)
+```
+
+![](lab-09_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+``` r
+ggplot(compas, aes(x = c_charge_degree, fill = race)) +
+  geom_bar(binwidth = 1)
+```
+
+    ## Warning in geom_bar(binwidth = 1): Ignoring unknown parameters: `binwidth`
+
+![](lab-09_files/figure-gfm/unnamed-chunk-17-2.png)<!-- -->
+
+## Ex 19
+
+``` r
+# Create a logistic regression model
+recid_model <- glm(
+  two_year_recid ~ age + priors_count + c_charge_degree,
+  data = compas,
+  family = binomial()
+)
+
+# Add predicted probabilities to the dataset
+compas <- compas %>%
+  mutate(
+    predicted_prob = predict(recid_model, type = "response"),
+    our_high_risk = predicted_prob >= 0.5
+  )
+```
+
+## Ex 20
+
+The model is still kind of biased. The false positive rate is still much
+higher among black defendants by looking at the specificity.
+
+``` r
+compas$two_year_recid_bool <- compas$two_year_recid == 1
+compas$two_year_recid_bool <- as.factor(compas$two_year_recid_bool)
+compas$our_high_risk <- as.factor(compas$our_high_risk)
+
+# Black defendants
+compas_black_defendants <- compas %>% 
+  filter(race == "African-American")
+
+set.seed(304844)
+confusionMatrix(
+  compas_black_defendants$our_high_risk,
+  compas_black_defendants$two_year_recid_bool,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+```
+
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction FALSE TRUE
+    ##      FALSE  1279  714
+    ##      TRUE    516 1187
+    ##                                           
+    ##                Accuracy : 0.6672          
+    ##                  95% CI : (0.6518, 0.6824)
+    ##     No Information Rate : 0.5143          
+    ##     P-Value [Acc > NIR] : < 2.2e-16       
+    ##                                           
+    ##                   Kappa : 0.3359          
+    ##                                           
+    ##  Mcnemar's Test P-Value : 1.942e-08       
+    ##                                           
+    ##             Sensitivity : 0.7125          
+    ##             Specificity : 0.6244          
+    ##          Pos Pred Value : 0.6417          
+    ##          Neg Pred Value : 0.6970          
+    ##              Prevalence : 0.4857          
+    ##          Detection Rate : 0.3460          
+    ##    Detection Prevalence : 0.5392          
+    ##       Balanced Accuracy : 0.6685          
+    ##                                           
+    ##        'Positive' Class : FALSE           
+    ## 
+
+``` r
+# White defendants
+compas_white_defendants <- compas %>% 
+  filter(race == "Caucasian")
+
+set.seed(304844)
+confusionMatrix(
+  compas_white_defendants$our_high_risk,
+  compas_white_defendants$two_year_recid_bool,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+```
+
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction FALSE TRUE
+    ##      FALSE  1276  585
+    ##      TRUE    212  381
+    ##                                           
+    ##                Accuracy : 0.6752          
+    ##                  95% CI : (0.6563, 0.6937)
+    ##     No Information Rate : 0.6064          
+    ##     P-Value [Acc > NIR] : 9.228e-13       
+    ##                                           
+    ##                   Kappa : 0.2702          
+    ##                                           
+    ##  Mcnemar's Test P-Value : < 2.2e-16       
+    ##                                           
+    ##             Sensitivity : 0.8575          
+    ##             Specificity : 0.3944          
+    ##          Pos Pred Value : 0.6857          
+    ##          Neg Pred Value : 0.6425          
+    ##              Prevalence : 0.6064          
+    ##          Detection Rate : 0.5200          
+    ##    Detection Prevalence : 0.7584          
+    ##       Balanced Accuracy : 0.6260          
+    ##                                           
+    ##        'Positive' Class : FALSE           
+    ## 
+
+## Ex 21
+
+``` r
+# Create a logistic regression model with race
+recid_model_with_race <- glm(
+  two_year_recid ~ age + priors_count + c_charge_degree + race,
+  data = compas,
+  family = binomial()
+)
+
+# Add predicted probabilities to the dataset
+compas <- compas %>%
+  mutate(
+    predicted_prob_with_race = predict(recid_model_with_race, type = "response"),
+    race_high_risk = predicted_prob_with_race >= 0.5
+  )
+```
+
+## Ex 22
+
+The model is still kind of biased. Oddly, the predictions of white
+defendants are exactly the same across the two models. See the last
+confusion matrix.
+
+``` r
+compas$race_high_risk <- as.factor(compas$race_high_risk)
+
+# Black defendants
+compas_black_defendants <- compas %>% 
+  filter(race == "African-American")
+
+set.seed(304844)
+confusionMatrix(
+  compas_black_defendants$race_high_risk,
+  compas_black_defendants$two_year_recid_bool,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+```
+
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction FALSE TRUE
+    ##      FALSE  1200  606
+    ##      TRUE    595 1295
+    ##                                           
+    ##                Accuracy : 0.6751          
+    ##                  95% CI : (0.6597, 0.6901)
+    ##     No Information Rate : 0.5143          
+    ##     P-Value [Acc > NIR] : <2e-16          
+    ##                                           
+    ##                   Kappa : 0.3497          
+    ##                                           
+    ##  Mcnemar's Test P-Value : 0.7729          
+    ##                                           
+    ##             Sensitivity : 0.6685          
+    ##             Specificity : 0.6812          
+    ##          Pos Pred Value : 0.6645          
+    ##          Neg Pred Value : 0.6852          
+    ##              Prevalence : 0.4857          
+    ##          Detection Rate : 0.3247          
+    ##    Detection Prevalence : 0.4886          
+    ##       Balanced Accuracy : 0.6749          
+    ##                                           
+    ##        'Positive' Class : FALSE           
+    ## 
+
+``` r
+# White defendants
+compas_white_defendants <- compas %>% 
+  filter(race == "Caucasian")
+
+set.seed(304844)
+confusionMatrix(
+  compas_white_defendants$race_high_risk,
+  compas_white_defendants$two_year_recid_bool,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+```
+
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction FALSE TRUE
+    ##      FALSE  1276  585
+    ##      TRUE    212  381
+    ##                                           
+    ##                Accuracy : 0.6752          
+    ##                  95% CI : (0.6563, 0.6937)
+    ##     No Information Rate : 0.6064          
+    ##     P-Value [Acc > NIR] : 9.228e-13       
+    ##                                           
+    ##                   Kappa : 0.2702          
+    ##                                           
+    ##  Mcnemar's Test P-Value : < 2.2e-16       
+    ##                                           
+    ##             Sensitivity : 0.8575          
+    ##             Specificity : 0.3944          
+    ##          Pos Pred Value : 0.6857          
+    ##          Neg Pred Value : 0.6425          
+    ##              Prevalence : 0.6064          
+    ##          Detection Rate : 0.5200          
+    ##    Detection Prevalence : 0.7584          
+    ##       Balanced Accuracy : 0.6260          
+    ##                                           
+    ##        'Positive' Class : FALSE           
+    ## 
+
+``` r
+confusionMatrix(
+  compas_white_defendants$race_high_risk,
+  compas_white_defendants$our_high_risk,
+  positive = NULL,
+  prevalence = NULL,
+  mode = "sens_spec",
+)
+```
+
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction FALSE TRUE
+    ##      FALSE  1861    0
+    ##      TRUE      0  593
+    ##                                      
+    ##                Accuracy : 1          
+    ##                  95% CI : (0.9985, 1)
+    ##     No Information Rate : 0.7584     
+    ##     P-Value [Acc > NIR] : < 2.2e-16  
+    ##                                      
+    ##                   Kappa : 1          
+    ##                                      
+    ##  Mcnemar's Test P-Value : NA         
+    ##                                      
+    ##             Sensitivity : 1.0000     
+    ##             Specificity : 1.0000     
+    ##          Pos Pred Value : 1.0000     
+    ##          Neg Pred Value : 1.0000     
+    ##              Prevalence : 0.7584     
+    ##          Detection Rate : 0.7584     
+    ##    Detection Prevalence : 0.7584     
+    ##       Balanced Accuracy : 1.0000     
+    ##                                      
+    ##        'Positive' Class : FALSE      
+    ## 
+
+## Ex 23
+
+Given what we have here, such algorithms should not be used. I think the
+biggest concern is accuracy, which is in the 60% to 70% range. This is
+far from being perfect. If they are used, decision-makers should be told
+the key performance indices, such as accuracy, sensitivity, specificity,
+and fairness. The trade-off between accuracy and fairness seems to be
+tricky to handle. One potential solution is a multilevel model
+structure, such as including racial-level and defendant-level
+predictors. The role of transparency in algorithmic decision-making is
+to acknowledge there is no transparency in algorithmic decision-making.
