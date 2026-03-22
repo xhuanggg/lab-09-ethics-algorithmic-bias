@@ -14,6 +14,7 @@ library(tidyverse)
 library(fairness)
 library(janitor)
 library(gmodels)
+library(lmtest)
 ```
 
 ### The data
@@ -169,3 +170,35 @@ compas_r %>%
 ```
 
 # Part 4
+## Ex 12
+
+The algorithm assigns a much heavier weight on prior convictions among black defendants.
+```{r}
+ggplot(compas_r, aes(x = priors_count, y = decile_score, color = race)) +
+  geom_point()
+```
+
+## Ex 13
+
+I first regressed the two-year recidivation on the risk score (model 1), and then added race (model 2) and the interaction term of race and the risk score (model 3). Across three models, the risk score is a significant predictor of the two-year recidivation. Race and the interaction term are not significant predictors of the outcome. Results of likelihood ratio tests indicate the three models have similar model fit. Therefore, the risk score predicts two-year recidivation in a similar way among black and white defendants. In other words, there is not enough evidence to show the relationship between the risk score and two-year recidivation is related to the race of defendants. From this perspective, Northpointe’s claim that the algorithm is fair seems to be supported by the results
+```{r}
+model1 <- glm(two_year_recid ~ decile_score, data = compas_r, family = binomial)
+summary(model1)
+
+model2 <- glm(two_year_recid ~ decile_score + race, data = compas_r, family = binomial)
+summary(model2)
+
+model3 <- glm(two_year_recid ~ decile_score + race + decile_score*race, data = compas_r, family = binomial)
+summary(model3)
+
+lrtest(model1, model2)
+lrtest(model2, model3)
+lrtest(model1, model3)
+```
+
+# Part 5
+
+
+
+
+

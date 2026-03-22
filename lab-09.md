@@ -12,6 +12,7 @@ library(tidyverse)
 library(fairness)
 library(janitor)
 library(gmodels)
+library(lmtest)
 ```
 
 ### The data
@@ -478,3 +479,148 @@ compas_r %>%
 ![](lab-09_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 # Part 4
+
+## Ex 12
+
+The algorithm assigns a much heavier weight on prior convictions among
+black defendants.
+
+``` r
+ggplot(compas_r, aes(x = priors_count, y = decile_score, color = race)) +
+  geom_point()
+```
+
+![](lab-09_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+## Ex 13
+
+I first regressed the two-year recidivation on the risk score (model 1),
+and then added race (model 2) and the interaction term of race and the
+risk score (model 3). Across three models, the risk score is a
+significant predictor of the two-year recidivation. Race and the
+interaction term are not significant predictors of the outcome. Results
+of likelihood ratio tests indicate the three models have similar model
+fit. Therefore, the risk score predicts two-year recidivation in a
+similar way among black and white defendants. In other words, there is
+not enough evidence to show the relationship between the risk score and
+two-year recidivation is related to the race of defendants. From this
+perspective, Northpointe’s claim that the algorithm is fair seems to be
+supported by the results
+
+``` r
+model1 <- glm(two_year_recid ~ decile_score, data = compas_r, family = binomial)
+summary(model1)
+```
+
+    ## 
+    ## Call:
+    ## glm(formula = two_year_recid ~ decile_score, family = binomial, 
+    ##     data = compas_r)
+    ## 
+    ## Coefficients:
+    ##              Estimate Std. Error z value Pr(>|z|)    
+    ## (Intercept)  -1.40424    0.05522  -25.43   <2e-16 ***
+    ## decile_score  0.26686    0.01008   26.47   <2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## (Dispersion parameter for binomial family taken to be 1)
+    ## 
+    ##     Null deviance: 8497.5  on 6149  degrees of freedom
+    ## Residual deviance: 7707.3  on 6148  degrees of freedom
+    ## AIC: 7711.3
+    ## 
+    ## Number of Fisher Scoring iterations: 4
+
+``` r
+model2 <- glm(two_year_recid ~ decile_score + race, data = compas_r, family = binomial)
+summary(model2)
+```
+
+    ## 
+    ## Call:
+    ## glm(formula = two_year_recid ~ decile_score + race, family = binomial, 
+    ##     data = compas_r)
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error z value Pr(>|z|)    
+    ## (Intercept)   -1.34206    0.06547 -20.498   <2e-16 ***
+    ## decile_score   0.26216    0.01042  25.163   <2e-16 ***
+    ## raceCaucasian -0.10107    0.05780  -1.749   0.0803 .  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## (Dispersion parameter for binomial family taken to be 1)
+    ## 
+    ##     Null deviance: 8497.5  on 6149  degrees of freedom
+    ## Residual deviance: 7704.3  on 6147  degrees of freedom
+    ## AIC: 7710.3
+    ## 
+    ## Number of Fisher Scoring iterations: 4
+
+``` r
+model3 <- glm(two_year_recid ~ decile_score + race + decile_score*race, data = compas_r, family = binomial)
+summary(model3)
+```
+
+    ## 
+    ## Call:
+    ## glm(formula = two_year_recid ~ decile_score + race + decile_score * 
+    ##     race, family = binomial, data = compas_r)
+    ## 
+    ## Coefficients:
+    ##                            Estimate Std. Error z value Pr(>|z|)    
+    ## (Intercept)                -1.29698    0.07717 -16.806   <2e-16 ***
+    ## decile_score                0.25367    0.01296  19.572   <2e-16 ***
+    ## raceCaucasian              -0.20569    0.11217  -1.834   0.0667 .  
+    ## decile_score:raceCaucasian  0.02370    0.02178   1.088   0.2767    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## (Dispersion parameter for binomial family taken to be 1)
+    ## 
+    ##     Null deviance: 8497.5  on 6149  degrees of freedom
+    ## Residual deviance: 7703.1  on 6146  degrees of freedom
+    ## AIC: 7711.1
+    ## 
+    ## Number of Fisher Scoring iterations: 4
+
+``` r
+lrtest(model1, model2)
+```
+
+    ## Likelihood ratio test
+    ## 
+    ## Model 1: two_year_recid ~ decile_score
+    ## Model 2: two_year_recid ~ decile_score + race
+    ##   #Df  LogLik Df  Chisq Pr(>Chisq)  
+    ## 1   2 -3853.7                       
+    ## 2   3 -3852.1  1 3.0533    0.08057 .
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+``` r
+lrtest(model2, model3)
+```
+
+    ## Likelihood ratio test
+    ## 
+    ## Model 1: two_year_recid ~ decile_score + race
+    ## Model 2: two_year_recid ~ decile_score + race + decile_score * race
+    ##   #Df  LogLik Df  Chisq Pr(>Chisq)
+    ## 1   3 -3852.1                     
+    ## 2   4 -3851.6  1 1.1876     0.2758
+
+``` r
+lrtest(model1, model3)
+```
+
+    ## Likelihood ratio test
+    ## 
+    ## Model 1: two_year_recid ~ decile_score
+    ## Model 2: two_year_recid ~ decile_score + race + decile_score * race
+    ##   #Df  LogLik Df  Chisq Pr(>Chisq)
+    ## 1   2 -3853.7                     
+    ## 2   4 -3851.6  2 4.2409       0.12
+
+# Part 5
