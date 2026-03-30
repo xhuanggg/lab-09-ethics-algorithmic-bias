@@ -629,19 +629,30 @@ lrtest(model1, model3)
 
 ## Ex 14
 
-I would ensure equal or at least similar distribution of TN, TP, FN, and
-FP rates across races.
+I would assign more weigh to accuracy, especially false-positive rates.
+Calibration is important. But the problem is that, although the same
+score predicts the same probability across groups, the predictions among
+certain groups are simply worse, which makes such calibration less
+meaningful. Specifically, I will ensure equal or at least similar
+accuracy and false-positive rates across different groups.
 
 ## Ex 15
 
-Ensuring similar prediction accuracy across races may compromise
-calibration and vice versa.
+There are different types of fairness involves. The first type is
+whether the predictions are as accurate across different groups. The
+second type is calibration. The third type of fairness is how the model
+makes predictions. If the model makes its predictions largely based on
+certain demographic features such as race and gender, the model would
+not be fair.
 
 ## Ex 16
 
-Algorithm developers should give a full disclosure of the caveats when
-using such information. In the case of COMPAS, Northpointe should
-disclose their model has different prediction accuracies across races.
+The highest level of policy change is to set a reasonably high minimum
+accuracy for algorithms. The accuracy of COMPAS is 60%-ish. That is not
+impressive, slightly better than a coin flip. Other policy changes I
+would propose relate to my comments on fairness. The accuracy for
+different race groups should be disclosed. How the model makes its
+predictions should also be disclosed.
 
 # Stretch
 
