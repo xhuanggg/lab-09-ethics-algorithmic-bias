@@ -234,8 +234,9 @@ lower or higher decile scores.
 compas_r <- compas %>% 
   filter(race %in% c("African-American", "Caucasian"))
 
-ggplot(compas_r, aes(x = decile_score, fill = race)) +
-  geom_histogram(binwidth = 1)
+ggplot(compas_r, aes(x = decile_score)) +
+  geom_histogram(binwidth = 1) +
+  facet_wrap(~ race)
 ```
 
 ![](lab-09_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->

@@ -111,8 +111,9 @@ The distribution of decile scores among white defendants is right skewed, which 
 compas_r <- compas %>% 
   filter(race %in% c("African-American", "Caucasian"))
 
-ggplot(compas_r, aes(x = decile_score, fill = race)) +
-  geom_histogram(binwidth = 1)
+ggplot(compas_r, aes(x = decile_score)) +
+  geom_histogram(binwidth = 1) +
+  facet_wrap(~ race)
 ```
 
 ## Ex 9
